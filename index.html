@@ -2,218 +2,836 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>ひらがな・カタカナ なぞり書き</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>たのしい！ひらがな・カタカナ あいうえおキッズ</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti for Celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Google Fonts for Friendly Japanese Rounded Typography -->
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap" rel="stylesheet">
+  
   <style>
     body {
-      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
-      text-align: center;
-      background-color: #fff8e1;
-      margin: 0;
-      padding: 10px;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      touch-action: manipulation;
       user-select: none;
+      -webkit-user-select: none;
+      background-color: #fefce8;
     }
-    .mode-switch {
-      margin-bottom: 10px;
+
+    /* Custom Scrollbar for 50-on Table */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
     }
-    button.mode-btn {
-      font-size: 1.2rem;
-      padding: 8px 16px;
-      border-radius: 20px;
-      border: 2px solid #ff9800;
-      background-color: #fff;
-      font-weight: bold;
-      cursor: pointer;
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
-    button.mode-btn.active {
-      background-color: #ff9800;
-      color: #fff;
+
+    /* Bounce and Pulse Animations */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(2deg); }
     }
-    .char-select {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 15px;
+    .animate-float {
+      animation: floatSlow 3s ease-in-out infinite;
     }
-    .char-btn {
-      font-size: 2rem;
-      width: 60px;
-      height: 60px;
-      border-radius: 12px;
-      border: 3px solid #4caf50;
-      background-color: #fff;
-      cursor: pointer;
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      70% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); }
     }
-    .canvas-container {
-      position: relative;
-      width: 280px;
-      height: 280px;
-      margin: 0 auto;
-      background-color: #fff;
-      border: 4px rounded #4caf50;
-      border-radius: 24px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    .animate-pop {
+      animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
-    #bgCanvas, #drawCanvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      border-radius: 20px;
+
+    /* Custom Canvas Pattern Styling */
+    .grid-bg {
+      background-image: 
+        linear-gradient(to right, rgba(200, 200, 200, 0.3) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(200, 200, 200, 0.3) 1px, transparent 1px);
+      background-size: 50% 50%;
+      background-position: center center;
     }
-    .controls {
-      margin-top: 20px;
-      display: flex;
-      justify-content: center;
-      gap: 15px;
+
+    /* Canvas overlay stroke effects */
+    .hanamaru-overlay {
+      pointer-events: none;
+      animation: popIn 0.5s ease-out forwards;
     }
-    .action-btn {
-      font-size: 1.2rem;
-      padding: 12px 24px;
-      border-radius: 30px;
-      border: none;
-      font-weight: bold;
-      color: #fff;
-      cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .btn-sound { background-color: #2196f3; }
-    .btn-clear { background-color: #f44336; }
   </style>
 </head>
-<body>
+<body class="bg-amber-50 text-slate-800 min-h-screen flex flex-col justify-between overflow-x-hidden select-none">
 
-  <div class="mode-switch">
-    <button class="mode-btn active" id="btnHiragana" onclick="switchMode('hiragana')">ひらがな</button>
-    <button class="mode-btn" id="btnKatakana" onclick="switchMode('katakana')">カタカナ</button>
-  </div>
+  <!-- Top Header Navigation -->
+  <header class="bg-amber-400 border-b-4 border-amber-500 shadow-md p-3 sticky top-0 z-30">
+    <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <!-- Logo / Title -->
+      <div class="flex items-center gap-2 cursor-pointer" onclick="switchTab('table')">
+        <span class="text-3xl animate-bounce">✏️</span>
+        <h1 class="text-xl sm:text-2xl font-black text-amber-950 tracking-wider">
+          あいうえお<span class="text-pink-600">キッズ</span>
+        </h1>
+      </div>
 
-  <div class="char-select" id="charList"></div>
+      <!-- Hiragana / Katakana Toggle Switch -->
+      <div class="flex items-center bg-amber-200/80 p-1.5 rounded-full border-2 border-amber-500 shadow-inner">
+        <button id="btn-mode-hira" onclick="setCharMode('hiragana')" className="" class="px-4 py-1.5 rounded-full font-black text-sm sm:text-base transition-all duration-200 bg-pink-500 text-white shadow-md scale-105">
+          ひらがな
+        </button>
+        <button id="btn-mode-kata" onclick="setCharMode('katakana')" class="px-4 py-1.5 rounded-full font-black text-sm sm:text-base transition-all duration-200 text-amber-900 hover:text-black">
+          カタカナ
+        </button>
+      </div>
+    </div>
+  </header>
 
-  <div class="canvas-container">
-    <canvas id="bgCanvas" width="280" height="280"></canvas>
-    <canvas id="drawCanvas" width="280" height="280"></canvas>
-  </div>
+  <!-- Main Container -->
+  <main class="max-w-4xl w-full mx-auto p-2 sm:p-4 flex-1 flex flex-col justify-center">
 
-  <div class="controls">
-    <button class="action-btn btn-sound" onclick="playSound()">🔊 おと</button>
-    <button class="action-btn btn-clear" onclick="clearCanvas()">🧹 けす</button>
-  </div>
+    <!-- TAB 1: 五十音表 (50-on Table) -->
+    <section id="tab-table" class="view-tab space-y-4">
+      <div class="flex items-center justify-between bg-white p-3 rounded-2xl shadow-sm border-2 border-amber-200">
+        <div class="text-sm sm:text-base font-extrabold text-amber-800 flex items-center gap-2">
+          <span>👇</span> <span>もじを えらんでね！</span>
+        </div>
+        <button onclick="playRandomAudioIntro()" class="bg-emerald-400 hover:bg-emerald-500 text-emerald-950 font-black px-3 py-1.5 rounded-xl shadow border-2 border-emerald-600 text-xs sm:text-sm flex items-center gap-1 active:scale-95 transition">
+          🔊 おはなし
+        </button>
+      </div>
+
+      <!-- 50-on Grid -->
+      <div class="bg-white rounded-3xl p-3 sm:p-5 shadow-xl border-4 border-amber-300">
+        <div id="grid-50on" class="grid grid-cols-5 gap-1.5 sm:gap-3 text-center dir-rtl">
+          <!-- Dynamically Generated 50-on Buttons -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: なぞり書き (Tracing Canvas) -->
+    <section id="tab-trace" class="view-tab hidden space-y-3">
+      <!-- Top Character Control bar -->
+      <div class="flex items-center justify-between bg-white p-2.5 sm:p-4 rounded-2xl shadow-md border-2 border-pink-200">
+        <button onclick="navigateChar(-1)" class="bg-sky-400 hover:bg-sky-500 text-white font-black text-lg sm:text-xl px-4 py-2 rounded-2xl border-b-4 border-sky-600 active:translate-y-1 shadow transition">
+          ◀ まえ
+        </button>
+
+        <div class="flex items-center gap-3">
+          <div class="text-center">
+            <span id="trace-char-display" class="text-4xl sm:text-6xl font-black text-pink-600 drop-shadow">あ</span>
+          </div>
+          <button onclick="speakCurrentChar()" class="bg-amber-300 hover:bg-amber-400 text-amber-950 p-2.5 rounded-2xl border-2 border-amber-500 text-xl shadow active:scale-95 transition">
+            🔊
+          </button>
+        </div>
+
+        <button onclick="navigateChar(1)" class="bg-sky-400 hover:bg-sky-500 text-white font-black text-lg sm:text-xl px-4 py-2 rounded-2xl border-b-4 border-sky-600 active:translate-y-1 shadow transition">
+          つぎ ▶
+        </button>
+      </div>
+
+      <!-- Main Canvas Card -->
+      <div class="bg-white rounded-3xl p-3 sm:p-6 shadow-xl border-4 border-pink-300 flex flex-col items-center justify-center relative">
+        
+        <!-- Word Preview Banner -->
+        <div id="word-banner" class="mb-3 flex items-center gap-2 bg-pink-50 px-4 py-2 rounded-full border border-pink-200 shadow-sm cursor-pointer" onclick="speakWord()">
+          <span id="word-emoji" class="text-3xl sm:text-4xl">🦆</span>
+          <span id="word-text" class="text-xl sm:text-2xl font-black text-slate-700">あひる</span>
+          <span class="text-xs bg-pink-500 text-white font-extrabold px-2 py-0.5 rounded-full ml-1">🔊 きく</span>
+        </div>
+
+        <!-- Canvas Drawing Area -->
+        <div class="relative w-[280px] h-[280px] sm:w-[340px] sm:h-[340px] rounded-3xl overflow-hidden border-4 border-amber-300 grid-bg shadow-inner bg-white">
+          <!-- Guide Character Layer -->
+          <canvas id="guideCanvas" width="340" height="340" class="absolute top-0 left-0 w-full h-full pointer-events-none z-0"></canvas>
+          <!-- Drawing Layer -->
+          <canvas id="drawCanvas" width="340" height="340" class="absolute top-0 left-0 w-full h-full z-10 cursor-crosshair touch-none"></canvas>
+          
+          <!-- Result Stamp Overlay (Hanamaru or Oshii) -->
+          <div id="stamp-overlay" class="hidden absolute inset-0 flex flex-col items-center justify-center z-20 hanamaru-overlay bg-white/80 backdrop-blur-sm p-4 text-center">
+            <div id="stamp-icon" class="text-[90px] sm:text-[120px] leading-none drop-shadow-2xl animate-pop">💮</div>
+            <div id="stamp-text" class="text-xl sm:text-2xl font-black mt-1 mb-3 text-pink-600 drop-shadow">たいへんよくできました！</div>
+            <div class="flex items-center gap-2">
+              <button onclick="retryCurrentTrace()" class="bg-amber-400 hover:bg-amber-500 text-amber-950 font-black px-4 py-2 rounded-2xl shadow-md border-b-4 border-amber-600 active:translate-y-0.5 text-sm sm:text-base flex items-center gap-1">
+                🔄 もういちど
+              </button>
+              <button onclick="navigateChar(1)" class="bg-pink-500 hover:bg-pink-600 text-white font-black px-4 py-2 rounded-2xl shadow-md border-b-4 border-pink-700 active:translate-y-0.5 text-sm sm:text-base flex items-center gap-1">
+                つぎ ▶
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drawing Tools -->
+        <div class="mt-4 w-full flex flex-wrap items-center justify-between gap-2">
+          <!-- Color Palette -->
+          <div class="flex items-center gap-1.5 bg-slate-100 p-2 rounded-2xl border border-slate-200">
+            <button onclick="setPenColor('#ec4899')" class="pen-btn w-8 h-8 rounded-full bg-pink-500 border-2 border-white ring-2 ring-pink-500 shadow active:scale-95"></button>
+            <button onclick="setPenColor('#3b82f6')" class="pen-btn w-8 h-8 rounded-full bg-blue-500 border-2 border-white ring-1 ring-slate-300 shadow active:scale-95"></button>
+            <button onclick="setPenColor('#10b981')" class="pen-btn w-8 h-8 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-slate-300 shadow active:scale-95"></button>
+            <button onclick="setPenColor('#f59e0b')" class="pen-btn w-8 h-8 rounded-full bg-amber-500 border-2 border-white ring-1 ring-slate-300 shadow active:scale-95"></button>
+            <button onclick="setPenColor('#8b5cf6')" class="pen-btn w-8 h-8 rounded-full bg-purple-500 border-2 border-white ring-1 ring-slate-300 shadow active:scale-95"></button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center gap-2">
+            <button onclick="clearCanvas()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-extrabold px-3 py-2 rounded-2xl border-b-2 border-slate-400 text-sm flex items-center gap-1 shadow active:scale-95 transition">
+              🧹 けす
+            </button>
+            <button onclick="checkTracingComplete()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-5 py-2 rounded-2xl border-b-4 border-emerald-700 text-base sm:text-lg flex items-center gap-1 shadow-lg active:translate-y-1 transition animate-pulse">
+              ✨ できた！
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: ことばずかん (Flashcards) -->
+    <section id="tab-cards" class="view-tab hidden space-y-4">
+      <div class="bg-white p-4 rounded-3xl shadow-xl border-4 border-indigo-300 flex flex-col items-center text-center space-y-4">
+        
+        <div class="flex items-center justify-between w-full">
+          <button onclick="navigateCard(-1)" class="bg-indigo-400 text-white font-black px-4 py-2 rounded-2xl shadow active:scale-95">◀ まえ</button>
+          <span class="text-xs sm:text-sm font-extrabold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full">ことばの カード</span>
+          <button onclick="navigateCard(1)" class="bg-indigo-400 text-white font-black px-4 py-2 rounded-2xl shadow active:scale-95">つぎ ▶</button>
+        </div>
+
+        <!-- Big Card Container -->
+        <div onclick="speakWord()" class="w-full max-w-sm bg-gradient-to-b from-indigo-50 to-purple-50 p-6 rounded-3xl border-4 border-indigo-200 shadow-lg cursor-pointer transform hover:scale-105 transition-all duration-300 flex flex-col items-center space-y-4">
+          <div class="flex items-center gap-3">
+            <span id="card-char" class="text-6xl font-black text-indigo-600 drop-shadow">あ</span>
+            <span class="text-2xl text-slate-400 font-black">の</span>
+          </div>
+
+          <div id="card-emoji" class="text-8xl sm:text-9xl my-2 animate-float">
+            🦆
+          </div>
+
+          <div class="bg-white px-6 py-2 rounded-2xl border-2 border-indigo-200 shadow-md">
+            <span id="card-word" class="text-3xl sm:text-4xl font-black text-slate-800 tracking-wider">あひる</span>
+          </div>
+
+          <div class="text-xs text-indigo-600 font-bold flex items-center gap-1">
+            <span>👆 タッチで おとが なるよ！</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: おとのクイズ (Karuta Sound Quiz Game) -->
+    <section id="tab-quiz" class="view-tab hidden space-y-4">
+      <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-xl border-4 border-emerald-300 text-center space-y-4">
+        
+        <div class="flex items-center justify-between bg-emerald-50 p-3 rounded-2xl border border-emerald-200">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">⭐</span>
+            <span class="text-sm sm:text-base font-black text-emerald-900">すこあ: <span id="quiz-score" class="text-xl text-pink-600">0</span></span>
+          </div>
+          <button onclick="startNewQuizRound()" class="bg-emerald-500 text-white font-black px-4 py-1.5 rounded-xl shadow text-sm hover:bg-emerald-600 active:scale-95">
+            🔄 もういちど
+          </button>
+        </div>
+
+        <!-- Question Prompt Banner -->
+        <div class="bg-amber-100 p-4 rounded-2xl border-2 border-amber-300 shadow-sm flex flex-col items-center gap-2">
+          <p class="text-lg sm:text-xl font-black text-amber-950">
+            どれかな？ きいてみてね！
+          </p>
+          <button onclick="playQuizQuestionSound()" class="bg-pink-500 hover:bg-pink-600 text-white font-black text-lg px-6 py-2 rounded-full shadow-lg border-b-4 border-pink-700 active:translate-y-1 transition flex items-center gap-2 animate-bounce">
+            🔊 「<span id="quiz-target-char">？</span>」をきく
+          </button>
+        </div>
+
+        <!-- 4 Option Cards -->
+        <div id="quiz-options" class="grid grid-cols-2 gap-3 sm:gap-4 max-w-md mx-auto pt-2">
+          <!-- Dynamically populated 4 choice buttons -->
+        </div>
+
+        <!-- Feedback Result Overlay -->
+        <div id="quiz-feedback" class="hidden text-2xl font-black p-3 rounded-2xl animate-pop"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Tab Bar -->
+  <nav class="bg-white border-t-4 border-amber-300 shadow-2xl p-2 sticky bottom-0 z-30">
+    <div class="max-w-md mx-auto grid grid-cols-4 gap-1 text-center">
+      <button onclick="switchTab('table')" id="nav-table" class="nav-btn flex flex-col items-center p-2 rounded-2xl text-amber-900 font-black bg-amber-100 border-2 border-amber-400">
+        <span class="text-2xl">📱</span>
+        <span class="text-xs">ひょう</span>
+      </button>
+      <button onclick="switchTab('trace')" id="nav-trace" class="nav-btn flex flex-col items-center p-2 rounded-2xl text-slate-600 font-black hover:bg-amber-50">
+        <span class="text-2xl">✏️</span>
+        <span class="text-xs">なぞり</span>
+      </button>
+      <button onclick="switchTab('cards')" id="nav-cards" class="nav-btn flex flex-col items-center p-2 rounded-2xl text-slate-600 font-black hover:bg-amber-50">
+        <span class="text-2xl">🖼️</span>
+        <span class="text-xs">ずかん</span>
+      </button>
+      <button onclick="switchTab('quiz')" id="nav-quiz" class="nav-btn flex flex-col items-center p-2 rounded-2xl text-slate-600 font-black hover:bg-amber-50">
+        <span class="text-2xl">🎮</span>
+        <span class="text-xs">クイズ</span>
+      </button>
+    </div>
+  </nav>
 
   <script>
-    const data = {
-      hiragana: ['あ', 'い', 'う', 'え', 'お'],
-      katakana: ['ア', 'イ', 'ウ', 'エ', 'オ']
-    };
+    // 50-on Dataset with Hiragana, Katakana, Representative Word and Emoji
+    const kanaData = [
+      { h: 'あ', k: 'ア', word: 'あひる', emoji: '🦆' },
+      { h: 'い', k: 'イ', word: 'いちご', emoji: '🍓' },
+      { h: 'う', k: 'ウ', word: 'うさぎ', emoji: '🐰' },
+      { h: 'え', k: 'エ', word: 'えんぴつ', emoji: '✏️' },
+      { h: 'お', k: 'オ', word: 'おにぎり', emoji: '🍙' },
 
-    let currentMode = 'hiragana';
-    let currentChar = 'あ';
-    let isDrawing = false;
+      { h: 'か', k: 'カ', word: 'かめ', emoji: '🐢' },
+      { h: 'き', k: 'キ', word: 'きりん', emoji: '🦒' },
+      { h: 'く', k: 'ク', word: 'くま', emoji: '🐻' },
+      { h: 'け', k: 'ケ', word: 'ケーキ', emoji: '🍰' },
+      { h: 'こ', k: 'コ', word: 'らいおん', emoji: '🦁' },
 
-    const bgCanvas = document.getElementById('bgCanvas');
-    const bgCtx = bgCanvas.getContext('2d');
-    const drawCanvas = document.getElementById('drawCanvas');
-    const drawCtx = drawCanvas.getContext('2d');
+      { h: 'さ', k: 'サ', word: 'さかな', emoji: '🐟' },
+      { h: 'し', k: 'シ', word: 'しか', emoji: '🦌' },
+      { h: 'す', k: 'ス', word: 'すいか', emoji: '🍉' },
+      { h: 'せ', k: 'セ', word: 'せみ', emoji: '🪙' },
+      { h: 'そ', k: 'ソ', word: 'そら', emoji: '☁️' },
 
-    function init() {
-      renderCharButtons();
-      setupDrawing();
-      loadChar(currentChar);
+      { h: 'た', k: 'タ', word: 'たいこ', emoji: '🥁' },
+      { h: 'ち', k: 'チ', word: 'ちょうちょ', emoji: '🦋' },
+      { h: 'つ', k: 'ツ', word: 'つくし', emoji: '🌱' },
+      { h: 'て', k: 'テ', word: 'てんとうむし', emoji: '🐞' },
+      { h: 'と', k: 'ト', word: 'とまと', emoji: '🍅' },
+
+      { h: 'な', k: 'ナ', word: 'なす', emoji: '🍆' },
+      { h: 'に', k: 'ニ', word: 'にんじん', emoji: '🥕' },
+      { h: 'ぬ', k: 'ヌ', word: 'ぬいぐるみ', emoji: '🧸' },
+      { h: 'ね', k: 'ネ', word: 'ねこ', emoji: '🐱' },
+      { h: 'の', k: 'ノ', word: 'のり', emoji: '🍙' },
+
+      { h: 'は', k: 'ハ', word: 'はな', emoji: '🌸' },
+      { h: 'ひ', k: 'ヒ', word: 'ひまわり', emoji: '🌻' },
+      { h: 'ふ', k: 'フ', word: 'ふうせん', emoji: '🎈' },
+      { h: 'へ', k: 'ヘ', word: 'へび', emoji: '🐍' },
+      { h: 'ほ', k: 'ホ', word: 'ほし', emoji: '⭐' },
+
+      { h: 'ま', k: 'マ', word: 'みかん', emoji: '🍊' },
+      { h: 'み', k: 'ミ', word: 'みず', emoji: '💧' },
+      { h: 'む', k: 'ム', word: 'むし', emoji: '🐛' },
+      { h: 'め', k: 'メ', word: 'めがね', emoji: '👓' },
+      { h: 'も', k: 'モ', word: 'もも', emoji: '🍑' },
+
+      { h: 'や', k: 'ヤ', word: 'やま', emoji: '⛰️' },
+      { h: '', k: '', word: '', emoji: '' },
+      { h: 'ゆ', k: 'ユ', word: 'ゆき', emoji: '☃️' },
+      { h: '', k: '', word: '', emoji: '' },
+      { h: 'よ', k: 'ヨ', word: 'よし', emoji: '⛵' },
+
+      { h: 'ら', k: 'ラ', word: 'らっこ', emoji: '🦦' },
+      { h: 'り', k: 'リ', word: 'りんご', emoji: '🍎' },
+      { h: 'る', k: 'ル', word: 'るびー', emoji: '💎' },
+      { h: 'れ', k: 'レ', word: 'れもん', emoji: '🍋' },
+      { h: 'ろ', k: 'ロ', word: 'ろけっと', emoji: '🚀' },
+
+      { h: 'わ', k: 'ワ', word: 'わに', emoji: '🐊' },
+      { h: '', k: '', word: '', emoji: '' },
+      { h: 'を', k: 'ヲ', word: 'を', emoji: '🌀' },
+      { h: '', k: '', word: '', emoji: '' },
+      { h: 'ん', k: 'ン', word: 'ライオン', emoji: '🦁' }
+    ];
+
+    // Global State
+    let currentCharMode = 'hiragana'; // 'hiragana' or 'katakana'
+    let currentIndex = 0; // Current character index in dataset
+    let currentPenColor = '#ec4899';
+    let quizCurrentTarget = null;
+    let quizScore = 0;
+
+    // Web Audio Synthesizer for SFX
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new AudioContext();
+      }
     }
 
-    function switchMode(mode) {
-      currentMode = mode;
-      document.getElementById('btnHiragana').classList.toggle('active', mode === 'hiragana');
-      document.getElementById('btnKatakana').classList.toggle('active', mode === 'katakana');
-      currentChar = data[mode][0];
-      renderCharButtons();
-      loadChar(currentChar);
+    // Play synthesized sound effects
+    function playSoundEffect(type) {
+      initAudio();
+      if (!audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'pop') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (type === 'fanfare') {
+        // Celebratory chime
+        const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        freqs.forEach((f, idx) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(f, now + idx * 0.08);
+          g.connect(audioCtx.destination);
+          g.gain.setValueAtTime(0.25, now + idx * 0.08);
+          g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+          o.start(now + idx * 0.08);
+          o.stop(now + idx * 0.08 + 0.3);
+        });
+      } else if (type === 'wrong') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.setValueAtTime(150, now + 0.15);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
     }
 
-    function renderCharButtons() {
-      const container = document.getElementById('charList');
-      container.innerHTML = '';
-      data[currentMode].forEach(char => {
-        const btn = document.createElement('button');
-        btn.className = 'char-btn';
-        btn.textContent = char;
-        btn.onclick = () => loadChar(char);
-        container.appendChild(btn);
-      });
-    }
-
-    function loadChar(char) {
-      currentChar = char;
-      clearCanvas();
-      
-      // ガイド文字の描画
-      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-      bgCtx.font = '200px sans-serif';
-      bgCtx.fillStyle = '#e0e0e0';
-      bgCtx.textAlign = 'center';
-      bgCtx.textBaseline = 'middle';
-      bgCtx.fillText(char, bgCanvas.width / 2, bgCanvas.height / 2 + 10);
-
-      playSound();
-    }
-
-    function playSound() {
+    // Speech Synthesis
+    function speakText(text, rate = 0.85) {
       if ('speechSynthesis' in window) {
-        const uttr = new SpeechSynthesisUtterance(currentChar);
+        window.speechSynthesis.cancel(); // Stop ongoing speech
+        const uttr = new SpeechSynthesisUtterance(text);
         uttr.lang = 'ja-JP';
-        uttr.rate = 0.8; // 保育園児向けにゆっくり再生
+        uttr.rate = rate; // Slow & gentle speech for kids
+        uttr.pitch = 1.1; // Friendly higher pitch
         window.speechSynthesis.speak(uttr);
       }
     }
 
-    function clearCanvas() {
-      drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    function getCurrentChar() {
+      const item = kanaData[currentIndex];
+      return currentCharMode === 'hiragana' ? item.h : item.k;
     }
 
-    function setupDrawing() {
-      drawCtx.lineWidth = 24;
+    function speakCurrentChar() {
+      const char = getCurrentChar();
+      if (char) {
+        speakText(char, 0.7);
+      }
+    }
+
+    function speakWord() {
+      const item = kanaData[currentIndex];
+      if (item.word) {
+        speakText(`${item.h}。${item.word}`, 0.8);
+      }
+    }
+
+    function playRandomAudioIntro() {
+      speakText('あいうえおの べんきょうを しよう！ もじを えらんでね！');
+    }
+
+    // Mode Switch (Hiragana / Katakana)
+    function setCharMode(mode) {
+      currentCharMode = mode;
+      playSoundEffect('pop');
+
+      const btnHira = document.getElementById('btn-mode-hira');
+      const btnKata = document.getElementById('btn-mode-kata');
+
+      if (mode === 'hiragana') {
+        btnHira.className = "px-4 py-1.5 rounded-full font-black text-sm sm:text-base transition-all duration-200 bg-pink-500 text-white shadow-md scale-105";
+        btnKata.className = "px-4 py-1.5 rounded-full font-black text-sm sm:text-base transition-all duration-200 text-amber-900 hover:text-black";
+      } else {
+        btnKata.className = "px-4 py-1.5 rounded-full font-black text-sm sm:text-base transition-all duration-200 bg-pink-500 text-white shadow-md scale-105";
+        btnHira.className = "px-4 py-1.5 rounded-full font-black text-sm sm:text-base transition-all duration-200 text-amber-900 hover:text-black";
+      }
+
+      renderGrid();
+      updateTraceView();
+      updateCardView();
+    }
+
+    // Render 50-on Grid
+    function renderGrid() {
+      const gridContainer = document.getElementById('grid-50on');
+      gridContainer.innerHTML = '';
+
+      kanaData.forEach((item, index) => {
+        const char = currentCharMode === 'hiragana' ? item.h : item.k;
+
+        if (!char) {
+          // Empty slot in 50-on table
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'w-full aspect-square';
+          gridContainer.appendChild(emptyDiv);
+          return;
+        }
+
+        const btn = document.createElement('button');
+        btn.className = `w-full aspect-square bg-gradient-to-b from-amber-100 to-amber-200 hover:from-pink-200 hover:to-pink-300 active:scale-95 border-2 border-amber-300 rounded-2xl sm:rounded-3xl shadow flex flex-col items-center justify-center p-1 transition duration-150`;
+        
+        btn.onclick = () => {
+          playSoundEffect('pop');
+          currentIndex = index;
+          speakText(`${char}。${item.word}`);
+          switchTab('trace');
+        };
+
+        btn.innerHTML = `
+          <span class="text-2xl sm:text-4xl font-black text-amber-950">${char}</span>
+          <span class="text-xs sm:text-sm mt-0.5">${item.emoji}</span>
+        `;
+
+        gridContainer.appendChild(btn);
+      });
+    }
+
+    // Canvas & Tracing Logic
+    let guideCanvas, guideCtx, drawCanvas, drawCtx;
+    let isDrawing = false;
+
+    function initCanvas() {
+      guideCanvas = document.getElementById('guideCanvas');
+      guideCtx = guideCanvas.getContext('2d');
+      drawCanvas = document.getElementById('drawCanvas');
+      drawCtx = drawCanvas.getContext('2d');
+
+      // Add Pointer / Touch events
+      drawCanvas.addEventListener('pointerdown', startDrawing);
+      drawCanvas.addEventListener('pointermove', draw);
+      drawCanvas.addEventListener('pointerup', stopDrawing);
+      drawCanvas.addEventListener('pointercancel', stopDrawing);
+    }
+
+    function updateTraceView() {
+      const item = kanaData[currentIndex];
+      const char = getCurrentChar();
+
+      document.getElementById('trace-char-display').textContent = char;
+      document.getElementById('word-emoji').textContent = item.emoji;
+      document.getElementById('word-text').textContent = item.word;
+
+      // Reset stamps
+      document.getElementById('stamp-overlay').classList.add('hidden');
+
+      // Draw Gray Guide Character
+      drawGuideText(char);
+      clearCanvas();
+    }
+
+    function drawGuideText(char) {
+      if (!guideCtx) return;
+      guideCtx.clearRect(0, 0, guideCanvas.width, guideCanvas.height);
+
+      // Center dash guidelines
+      guideCtx.strokeStyle = '#fcd34d';
+      guideCtx.lineWidth = 2;
+      guideCtx.setLineDash([6, 6]);
+      guideCtx.beginPath();
+      guideCtx.moveTo(170, 0); guideCtx.lineTo(170, 340);
+      guideCtx.moveTo(0, 170); guideCtx.lineTo(340, 170);
+      guideCtx.stroke();
+      guideCtx.setLineDash([]);
+
+      // Draw faint guide character
+      guideCtx.font = '900 220px "M PLUS Rounded 1c", sans-serif';
+      guideCtx.fillStyle = '#e2e8f0'; // Light gray outline
+      guideCtx.textAlign = 'center';
+      guideCtx.textBaseline = 'middle';
+      guideCtx.fillText(char, 170, 175);
+
+      // Character stroke overlay
+      guideCtx.strokeStyle = '#cbd5e1';
+      guideCtx.lineWidth = 6;
+      guideCtx.strokeText(char, 170, 175);
+    }
+
+    function setPenColor(color) {
+      currentPenColor = color;
+      playSoundEffect('pop');
+    }
+
+    function clearCanvas() {
+      if (drawCtx) {
+        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+      }
+      document.getElementById('stamp-overlay').classList.add('hidden');
+    }
+
+    function retryCurrentTrace() {
+      playSoundEffect('pop');
+      clearCanvas();
+      speakText('もういちど かいてみよう！');
+    }
+
+    function getCanvasCoords(e) {
+      const rect = drawCanvas.getBoundingClientRect();
+      const scaleX = drawCanvas.width / rect.width;
+      const scaleY = drawCanvas.height / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      initAudio();
+      const pos = getCanvasCoords(e);
+      drawCtx.beginPath();
+      drawCtx.moveTo(pos.x, pos.y);
       drawCtx.lineCap = 'round';
       drawCtx.lineJoin = 'round';
-      drawCtx.strokeStyle = '#ff4081';
-
-      function getPos(e) {
-        const rect = drawCanvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return {
-          x: clientX - rect.left,
-          y: clientY - rect.top
-        };
-      }
-
-      function startDraw(e) {
-        isDrawing = true;
-        const pos = getPos(e);
-        drawCtx.beginPath();
-        drawCtx.moveTo(pos.x, pos.y);
-      }
-
-      function draw(e) {
-        if (!isDrawing) return;
-        e.preventDefault();
-        const pos = getPos(e);
-        drawCtx.lineTo(pos.x, pos.y);
-        drawCtx.stroke();
-      }
-
-      function stopDraw() {
-        isDrawing = false;
-      }
-
-      drawCanvas.addEventListener('mousedown', startDraw);
-      drawCanvas.addEventListener('mousemove', draw);
-      drawCanvas.addEventListener('mouseup', stopDraw);
-
-      drawCanvas.addEventListener('touchstart', startDraw);
-      drawCanvas.addEventListener('touchmove', draw);
-      drawCanvas.addEventListener('touchend', stopDraw);
+      drawCtx.lineWidth = 28; // Child-friendly thick stroke
+      drawCtx.strokeStyle = currentPenColor;
     }
 
-    window.onload = init;
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getCanvasCoords(e);
+      drawCtx.lineTo(pos.x, pos.y);
+      drawCtx.stroke();
+    }
+
+    function stopDrawing() {
+      isDrawing = false;
+    }
+
+    function checkTracingComplete() {
+      if (!guideCtx || !drawCtx) return;
+
+      const w = drawCanvas.width;
+      const h = drawCanvas.height;
+
+      // Get pixel data to evaluate tracing accuracy
+      const guideData = guideCtx.getImageData(0, 0, w, h).data;
+      const drawData = drawCtx.getImageData(0, 0, w, h).data;
+
+      let guidePixels = 0;
+      let coveredPixels = 0;
+      let totalDrawnPixels = 0;
+
+      // Sample pixels to evaluate coverage
+      for (let i = 0; i < guideData.length; i += 16) {
+        const gA = guideData[i + 3];
+        const gR = guideData[i];
+        const gG = guideData[i + 1];
+        const gB = guideData[i + 2];
+
+        // Filter out yellow guide grid lines (#fcd34d)
+        const isGridLine = (gR > 240 && gG > 200 && gB < 100);
+        const isGuideChar = gA > 50 && !isGridLine;
+
+        const dA = drawData[i + 3];
+        const isDrawn = dA > 50;
+
+        if (isDrawn) {
+          totalDrawnPixels++;
+        }
+
+        if (isGuideChar) {
+          guidePixels++;
+          if (isDrawn) {
+            coveredPixels++;
+          }
+        }
+      }
+
+      const overlay = document.getElementById('stamp-overlay');
+      const stampIcon = document.getElementById('stamp-icon');
+      const stampText = document.getElementById('stamp-text');
+
+      const coverage = guidePixels > 0 ? (coveredPixels / guidePixels) : 0;
+
+      // If user hasn't traced enough of the character guide strokes
+      if (totalDrawnPixels < 120 || coverage < 0.35) {
+        playSoundEffect('wrong');
+        speakText('おしい！ あとすこし！ もう一度かいてみよう！');
+
+        stampIcon.textContent = '💮';
+        stampIcon.className = "text-[90px] sm:text-[110px] leading-none drop-shadow-xl text-amber-500 animate-pop opacity-80";
+        stampText.textContent = 'おしい！ あとすこし！';
+        stampText.className = "text-xl sm:text-2xl font-black mt-1 mb-3 text-amber-600 drop-shadow";
+
+        overlay.classList.remove('hidden');
+      } else {
+        // Successfully traced character
+        playSoundEffect('fanfare');
+        speakText('すごい！ たいへんよくできました！');
+
+        stampIcon.textContent = '💮';
+        stampIcon.className = "text-[100px] sm:text-[130px] leading-none drop-shadow-2xl animate-pop text-pink-600";
+        stampText.textContent = 'たいへんよくできました！';
+        stampText.className = "text-2xl sm:text-3xl font-black mt-1 mb-3 text-pink-600 drop-shadow";
+
+        overlay.classList.remove('hidden');
+
+        confetti({
+          particleCount: 70,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    function navigateChar(delta) {
+      playSoundEffect('pop');
+      let newIdx = currentIndex + delta;
+      
+      // Skip empty slots
+      while (newIdx >= 0 && newIdx < kanaData.length && !kanaData[newIdx].h) {
+        newIdx += delta;
+      }
+
+      if (newIdx >= 0 && newIdx < kanaData.length) {
+        currentIndex = newIdx;
+        updateTraceView();
+        updateCardView();
+        speakCurrentChar();
+      }
+    }
+
+    // Flashcard View Logic
+    function updateCardView() {
+      const item = kanaData[currentIndex];
+      const char = getCurrentChar();
+
+      document.getElementById('card-char').textContent = char;
+      document.getElementById('card-emoji').textContent = item.emoji;
+      document.getElementById('card-word').textContent = item.word;
+    }
+
+    function navigateCard(delta) {
+      navigateChar(delta);
+      speakWord();
+    }
+
+    // Karuta Sound Quiz Mini-Game
+    function startNewQuizRound() {
+      const availableItems = kanaData.filter(x => x.h !== '');
+      const target = availableItems[Math.floor(Math.random() * availableItems.length)];
+      quizCurrentTarget = target;
+
+      const targetChar = currentCharMode === 'hiragana' ? target.h : target.k;
+      document.getElementById('quiz-target-char').textContent = targetChar;
+
+      // Pick 3 random wrong options
+      const options = [target];
+      while (options.length < 4) {
+        const rand = availableItems[Math.floor(Math.random() * availableItems.length)];
+        if (!options.includes(rand)) {
+          options.push(rand);
+        }
+      }
+
+      // Shuffle options
+      options.sort(() => Math.random() - 0.5);
+
+      const optionsContainer = document.getElementById('quiz-options');
+      optionsContainer.innerHTML = '';
+
+      options.forEach(opt => {
+        const optChar = currentCharMode === 'hiragana' ? opt.h : opt.k;
+        const btn = document.createElement('button');
+        btn.className = "bg-gradient-to-b from-amber-50 to-amber-100 border-4 border-amber-300 hover:border-pink-400 p-4 rounded-3xl shadow-lg flex flex-col items-center justify-center active:scale-95 transition transform duration-150";
+        
+        btn.onclick = () => handleQuizAnswer(opt, btn);
+
+        btn.innerHTML = `
+          <span class="text-5xl font-black text-amber-950">${optChar}</span>
+          <span class="text-3xl mt-1">${opt.emoji}</span>
+        `;
+
+        optionsContainer.appendChild(btn);
+      });
+
+      document.getElementById('quiz-feedback').classList.add('hidden');
+      playQuizQuestionSound();
+    }
+
+    function playQuizQuestionSound() {
+      if (quizCurrentTarget) {
+        const char = currentCharMode === 'hiragana' ? quizCurrentTarget.h : quizCurrentTarget.k;
+        speakText(`「${char}」は どれかな？`);
+      }
+    }
+
+    function handleQuizAnswer(selectedOption, btnElement) {
+      const feedback = document.getElementById('quiz-feedback');
+      feedback.classList.remove('hidden');
+
+      if (selectedOption === quizCurrentTarget) {
+        // Correct Answer
+        playSoundEffect('fanfare');
+        quizScore += 10;
+        document.getElementById('quiz-score').textContent = quizScore;
+
+        feedback.className = "text-2xl font-black p-3 rounded-2xl bg-emerald-100 text-emerald-800 border-2 border-emerald-400 animate-pop";
+        feedback.textContent = '⭕ せいかい！ すごいね！';
+        speakText('せいかい！ すごいね！');
+
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 }
+        });
+
+        setTimeout(() => {
+          startNewQuizRound();
+        }, 1800);
+
+      } else {
+        // Incorrect Answer
+        playSoundEffect('wrong');
+        feedback.className = "text-xl font-black p-3 rounded-2xl bg-rose-100 text-rose-800 border-2 border-rose-300 animate-pop";
+        feedback.textContent = '❌ ざんねん！ もういちど！';
+        speakText('もういちど やってみよう！');
+      }
+    }
+
+    // Navigation Tabs Switching
+    function switchTab(tabId) {
+      playSoundEffect('pop');
+
+      document.querySelectorAll('.view-tab').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+      // Update Bottom Bar Styling
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.className = "nav-btn flex flex-col items-center p-2 rounded-2xl text-slate-600 font-black hover:bg-amber-50";
+      });
+
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      if (activeNav) {
+        activeNav.className = "nav-btn flex flex-col items-center p-2 rounded-2xl text-amber-900 font-black bg-amber-100 border-2 border-amber-400";
+      }
+
+      if (tabId === 'trace') {
+        updateTraceView();
+      } else if (tabId === 'cards') {
+        updateCardView();
+        speakWord();
+      } else if (tabId === 'quiz') {
+        startNewQuizRound();
+      }
+    }
+
+    // Window Load Initialization
+    window.onload = () => {
+      renderGrid();
+      initCanvas();
+      updateTraceView();
+      updateCardView();
+    };
   </script>
 </body>
 </html>
