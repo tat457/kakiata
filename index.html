@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ひらがな・カタカナ なぞり書き</title>
+  <style>
+    body {
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      text-align: center;
+      background-color: #fff8e1;
+      margin: 0;
+      padding: 10px;
+      user-select: none;
+    }
+    .mode-switch {
+      margin-bottom: 10px;
+    }
+    button.mode-btn {
+      font-size: 1.2rem;
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 2px solid #ff9800;
+      background-color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button.mode-btn.active {
+      background-color: #ff9800;
+      color: #fff;
+    }
+    .char-select {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .char-btn {
+      font-size: 2rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      border: 3px solid #4caf50;
+      background-color: #fff;
+      cursor: pointer;
+    }
+    .canvas-container {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      margin: 0 auto;
+      background-color: #fff;
+      border: 4px rounded #4caf50;
+      border-radius: 24px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    #bgCanvas, #drawCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      border-radius: 20px;
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    .action-btn {
+      font-size: 1.2rem;
+      padding: 12px 24px;
+      border-radius: 30px;
+      border: none;
+      font-weight: bold;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .btn-sound { background-color: #2196f3; }
+    .btn-clear { background-color: #f44336; }
+  </style>
+</head>
+<body>
+
+  <div class="mode-switch">
+    <button class="mode-btn active" id="btnHiragana" onclick="switchMode('hiragana')">ひらがな</button>
+    <button class="mode-btn" id="btnKatakana" onclick="switchMode('katakana')">カタカナ</button>
+  </div>
+
+  <div class="char-select" id="charList"></div>
+
+  <div class="canvas-container">
+    <canvas id="bgCanvas" width="280" height="280"></canvas>
+    <canvas id="drawCanvas" width="280" height="280"></canvas>
+  </div>
+
+  <div class="controls">
+    <button class="action-btn btn-sound" onclick="playSound()">🔊 おと</button>
+    <button class="action-btn btn-clear" onclick="clearCanvas()">🧹 けす</button>
+  </div>
+
+  <script>
+    const data = {
+      hiragana: ['あ', 'い', 'う', 'え', 'お'],
+      katakana: ['ア', 'イ', 'ウ', 'エ', 'オ']
+    };
+
+    let currentMode = 'hiragana';
+    let currentChar = 'あ';
+    let isDrawing = false;
+
+    const bgCanvas = document.getElementById('bgCanvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    const drawCanvas = document.getElementById('drawCanvas');
+    const drawCtx = drawCanvas.getContext('2d');
+
+    function init() {
+      renderCharButtons();
+      setupDrawing();
+      loadChar(currentChar);
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById('btnHiragana').classList.toggle('active', mode === 'hiragana');
+      document.getElementById('btnKatakana').classList.toggle('active', mode === 'katakana');
+      currentChar = data[mode][0];
+      renderCharButtons();
+      loadChar(currentChar);
+    }
+
+    function renderCharButtons() {
+      const container = document.getElementById('charList');
+      container.innerHTML = '';
+      data[currentMode].forEach(char => {
+        const btn = document.createElement('button');
+        btn.className = 'char-btn';
+        btn.textContent = char;
+        btn.onclick = () => loadChar(char);
+        container.appendChild(btn);
+      });
+    }
+
+    function loadChar(char) {
+      currentChar = char;
+      clearCanvas();
+      
+      // ガイド文字の描画
+      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+      bgCtx.font = '200px sans-serif';
+      bgCtx.fillStyle = '#e0e0e0';
+      bgCtx.textAlign = 'center';
+      bgCtx.textBaseline = 'middle';
+      bgCtx.fillText(char, bgCanvas.width / 2, bgCanvas.height / 2 + 10);
+
+      playSound();
+    }
+
+    function playSound() {
+      if ('speechSynthesis' in window) {
+        const uttr = new SpeechSynthesisUtterance(currentChar);
+        uttr.lang = 'ja-JP';
+        uttr.rate = 0.8; // 保育園児向けにゆっくり再生
+        window.speechSynthesis.speak(uttr);
+      }
+    }
+
+    function clearCanvas() {
+      drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    }
+
+    function setupDrawing() {
+      drawCtx.lineWidth = 24;
+      drawCtx.lineCap = 'round';
+      drawCtx.lineJoin = 'round';
+      drawCtx.strokeStyle = '#ff4081';
+
+      function getPos(e) {
+        const rect = drawCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+          x: clientX - rect.left,
+          y: clientY - rect.top
+        };
+      }
+
+      function startDraw(e) {
+        isDrawing = true;
+        const pos = getPos(e);
+        drawCtx.beginPath();
+        drawCtx.moveTo(pos.x, pos.y);
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        drawCtx.lineTo(pos.x, pos.y);
+        drawCtx.stroke();
+      }
+
+      function stopDraw() {
+        isDrawing = false;
+      }
+
+      drawCanvas.addEventListener('mousedown', startDraw);
+      drawCanvas.addEventListener('mousemove', draw);
+      drawCanvas.addEventListener('mouseup', stopDraw);
+
+      drawCanvas.addEventListener('touchstart', startDraw);
+      drawCanvas.addEventListener('touchmove', draw);
+      drawCanvas.addEventListener('touchend', stopDraw);
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
